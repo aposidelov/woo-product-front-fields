@@ -29,7 +29,7 @@ Features
 The number of video series that allow to understand how to work with this plugin:
 
 <ol>
-    <li>[How to create the fields](https://youtu.be/hiQJDRO92Eg)</li>
+    <li>[How to create the fields](https://youtu.be/hiQJDRO92Eg))</li>
     <li>[The ways how to attach fields to the products](https://youtu.be/yH5XNSanKO8)</li>
     <li>[Product form and `Front fields` section](https://youtu.be/yaabj_qr5AU)</li>
     <li>[Settings form](https://youtu.be/kO0J9ZcNEGs)</li>

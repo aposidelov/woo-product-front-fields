@@ -291,14 +291,9 @@ function wpf_get_active_fields( $product_id, $index = 'id' ) {
       $item['weight'] = $weight++;
       $fields[$item[$index]] = $item;
     }
-  }  
-  //echo '<pre>'; wp_die(print_r($fields), true);
-  
+  }    
   uasort( $fields, function ( $a, $b ) { 
     $result = 0;
-    //$a['weight'] = isset( $a['weight'] ) ? $a['weight'] : 0;
-    //$b['weight'] = isset( $b['weight'] ) ? $b['weight'] : 0;
-
     if ( $a['weight'] > $b['weight'] ) {
         $result = 1;
     } elseif ( $a['weight'] < $b['weight'] ) {
@@ -306,10 +301,6 @@ function wpf_get_active_fields( $product_id, $index = 'id' ) {
     }
     return $result;    
   } );
-
-  
-  
-
   return $fields;
 }
 
@@ -339,22 +330,25 @@ function wpf_ajax_parse_form_data( $product_id, $form_data ) {
   $fields = wpf_get_active_fields( $product_id, 'name' );
   $names = array_column( $fields, 'name' ); 
   global $wpf_widgets; 
-  foreach ( $form_data as $form_item ) {    
-    $name = str_replace( '[]', '', $form_item['name'] );
-    if ( in_array( $name, $names ) ) {
+  foreach ( $form_data as $form_item ) {
+    $name = sanitize_text_field( $form_item['name'] );
+    $single_name = str_replace( '[]', '', $name );
+    $value = wpf_sanitize_value( $form_item['value'] );
+    if ( in_array( $single_name, $names ) ) {
       // if checkboxes field - save value as array
-      if ( ']' === substr( $form_item['name'], -1 ) ) {
-        if ( ! isset( $result[$name] ) ) {
-          $result[$name] = array();
+      if ( ']' === substr( $name, -1 ) ) {
+        if ( ! isset( $result[$single_name] ) ) {
+          $result[$single_name] = array();
         }
-        $result[$name][] = $form_item['value'];
-      } else if ( 'checkbox' === $wpf_widgets[ $fields[$name]['widget'] ]['type'] ) {
-        $result[$name] = 1;
+        $result[$single_name][] = $value;
+      } else if ( 'checkbox' === $wpf_widgets[ $fields[$single_name]['widget'] ]['type'] ) {
+        $result[$single_name] = 1;
       } else {
-        $result[$name] = $form_item['value'];
+        $result[$single_name] = $value;
       }
     }
   }
+
   return $result;
 }
 
@@ -403,15 +397,7 @@ function wpf_calculate_fields_charges( $product_id, $field_values ) {
   foreach ( $field_values as $name => $field_value ) {
     $field = wpf_get_field_by_name( $name );
     $charge = $field['charge'];
-    $widget = $field['widget'];
-    /*
-    $wpf_widgets;
-    $type = $wpf_widgets[$widget]['type'];
-     if ( in_array( $type, array( 'text', 'checkbox' ) ) &&
-          ( empty( trim( $charge ) ) || 
-               0 === $charge ) ) {
-      continue;
-    }*/    
+    $widget = $field['widget'];       
     //
     $class = $wpf_widgets[$widget]['product_charge_callback'][0];
     $method = $wpf_widgets[$widget]['product_charge_callback'][1];
@@ -467,14 +453,17 @@ function wpf_is_field_product( $product_id ) {
  * @return string
  */
 function wpf_get_post( $key, $default = 'off' ) {
-  return isset( $_POST[$key] ) ? $_POST[$key] : $default;
+  if ( isset( $_POST[$key] ) ) {
+    return wpf_sanitize_value( $_POST[$key] );
+  }
+  return $default;  
 }
 
 /**
  * Get formatted field's options like [ Title ( +Price ) ]
  * 
  * @param  integer $field_id 
- * @return [type]           
+ * @return array           
  */
 function wpf_get_field_options( $field_id, $formatted = true ) {
   if ( empty( $field_id ) ) {
@@ -626,7 +615,8 @@ function wpf_product_charges_global_load( $product_id ) {
   global $wpf_widgets;
 
   $fields = wpf_get_active_fields( $product_id );
-  $field_values = array();  
+  $field_values = array();    
+  
   foreach ( $fields as $field ) {
     $type = $wpf_widgets[ $field['widget'] ]['type'];
     $name = $field['name'];
@@ -643,9 +633,9 @@ function wpf_product_charges_global_load( $product_id ) {
     
     // setup default value
     if ( isset( $_POST[$name] ) ) {
-      $field_values[$name] = $_POST[$name];
+      $field_values[$name] = wpf_sanitize_value( $_POST[$name] );
     } else if ( isset( $_GET['wpf'] ) && isset( $_GET[$name] ) ) {
-      $field_values[$name] = $_GET[$name];
+      $field_values[$name] = wpf_sanitize_value( $_GET[$name] );
     } else if ( isset( $_POST['add-to-cart'] ) &&  
       'checkbox' === $type ) {
       $field_values[$name] = 0;
@@ -696,7 +686,7 @@ function wpf_product_charges_global_load( $product_id ) {
                                          $field['charge_type'] );
       }
     }
-    $wpf_products[$product_id][$field_id]['calculated_charge'] = wpf_format_charge( $calculated_charge );
+    $wpf_products[$product_id][$field_id]['calculated_charge'] = wpf_format_charge( $calculated_charge );    
   }  
 }
 
@@ -786,7 +776,7 @@ function wpf_get_image_sizes( $formatted = true ) {
  * @return  array 
  */
 function wpf_get_units( $key = 0 ) {  
-  $units = apply_filters( 'wpf_units', array() );
+  $units = apply_filters( 'wpf_units', array() );  
   if ( ! empty( $key ) ) {
     return $units[ $key ];
   }
@@ -873,4 +863,15 @@ function wpf_is_product_form( $hook ) {
  */
 function wpf_get_fields_by_profile_name( $name ) {
   return WPF_Field_Profile_DS::instance()->get_fields_by_name( $name );
+}
+
+/**
+ * Sanitize a string or the elements of the array 
+ * @param  array|string $value 
+ * @return array|string
+ */
+function wpf_sanitize_value( $value ) {
+  return is_array( $value ) ? 
+         array_map( 'sanitize_text_field', $value ) : 
+         sanitize_text_field( $value );
 }

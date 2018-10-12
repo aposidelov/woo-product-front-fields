@@ -72,11 +72,12 @@ class WPF_Front {
    */
   public function ajax_get_formatted_price() {        
     if ( isset( $_POST[ "product_id" ] ) ) {
-      $product_id = $_POST[ "product_id" ];      
+      $product_id = sanitize_text_field( $_POST[ "product_id" ] );      
       $form_data = $_POST[ 'form_data' ];
+      // sanitize $_POST['form_data'] inside wpf_ajax_parse_form_data()
       $form_values = wpf_ajax_parse_form_data( $product_id, $form_data );     
       $_POST = $_POST + $form_values;
-      $field_id = $_POST[ "field_id" ];      
+      $field_id = sanitize_text_field( $_POST[ "field_id" ] );      
       
       wpf_product_charges_global_load( $product_id );      
       wpf_widgets_global_load();
@@ -384,11 +385,11 @@ class WPF_Front {
     @TODO - Field dependency feature
   public function ajax_compare_dependency() {
     if ( isset( $_POST[ "target_field_id" ] ) ) {
-      $product_id = $_POST[ "product_id" ]; 
-      $target_field_id = $_POST[ "target_field_id" ];
-      $target_type = $_POST[ "target_type" ];
-      $expected_value = $_POST[ "expected_value" ];
-      $operation = $_POST[ "operation" ];  
+      $product_id = sanitize_text_field( $_POST[ "product_id" ] ); 
+      $target_field_id = sanitize_text_field( $_POST[ "target_field_id" ] );
+      $target_type = sanitize_text_field( $_POST[ "target_type" ] );
+      $expected_value = sanitize_text_field( $_POST[ "expected_value" ] );
+      $operation = sanitize_text_field( $_POST[ "operation" ] );  
       $form_data = $_POST[ 'form_data' ];
       $form_values = wpf_ajax_parse_form_data( $product_id, $form_data );      
       

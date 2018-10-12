@@ -42,6 +42,7 @@ class WPF_Checkboxes_Widget extends WPF_Base_Widget {
       $this->image_style = get_option( 'wpf_image_style', 'thumbnail' );
       $this->options = WPF_Field_Option_DS::instance()
                         ->get_options_by_field_id( $field['id'] );      
+      // check if checkboxes values passed in the query string
       if ( isset( $_GET[$this->name] ) ) {
         $this->values = explode( ',', $default_values );
       } else {  

@@ -88,7 +88,8 @@ class WPF_Field_CRUD {
    */
   public function ajax_get_charge_types() {
     if ( isset( $_POST[ "widget" ] ) ) {
-      $charge_types = wpf_get_charge_types( $_POST[ "widget" ] );
+      $widget = sanitize_text_field( $_POST[ "widget" ] );
+      $charge_types = wpf_get_charge_types( $widget );
       wp_send_json( array( 'status' => true, 'chargeTypes' => $charge_types ) );
       wp_die();
     }
@@ -102,7 +103,7 @@ class WPF_Field_CRUD {
    */
   public function ajax_get_field_info() {    
     if ( isset( $_POST[ "name" ] ) ) {
-      $name = $_POST[ "name" ];
+      $name = sanitize_text_field( $_POST[ "name" ] );
       $field = wpf_get_field_by_name( $name );
       $widget = $field['widget'];     
 
@@ -126,11 +127,12 @@ class WPF_Field_CRUD {
    * per current option that is going to be deleted
    */
   public function ajax_get_overridden_options_count() {        
-    if ( isset( $_POST[ "field_id" ] ) && 
-         isset( $_POST[ "option_id" ] ) ) {
+    if ( isset( $_POST[ "field_id" ] , $_POST[ "option_id" ] ) ) {
+      $field_id = sanitize_text_field( $_POST[ "field_id" ] );
+      $option_id = sanitize_text_field( $_POST[ "option_id" ] );
       $count = WPF_Field_Product_Option_DS::instance()
-                 ->get_overridden_options_count( $_POST[ "field_id" ], 
-                                                 $_POST[ "option_id" ] );
+                 ->get_overridden_options_count( $field_id, 
+                                                 $option_id );
       wp_send_json( array( 'status' => true, 'count' => $count ) );
       wp_die();
     }
@@ -144,10 +146,12 @@ class WPF_Field_CRUD {
    */
   public function ajax_product_form_recalculate_charges() {
     if ( isset( $_POST[ "wpf_data" ] ) && isset( $_POST[ "wpf_field_values" ] ) ) {
-      $field_values = $_POST[ "wpf_field_values" ];
+      $field_values = array_map( 'sanitize_text_field', $_POST[ "wpf_field_values" ] );
       $charges = 0;
       $charge_types = apply_filters( 'wpf_charge_types', array() );
       foreach ( $_POST[ "wpf_data" ] as $name => $item ) {
+        $name = sanitize_text_field( $name );
+        $item = array_map( 'sanitize_text_field', $item );
         $charge = apply_filters( 'wpf_charge_alter', $item['charge'], $item['value'], $name, $field_values, false, 0 );
         $charge = wpf_calculate_callback_execute( $charge, $item['value'], $item['charge_type'] );
         $charges += $charge;
@@ -180,7 +184,7 @@ class WPF_Field_CRUD {
     ?>
     <div class="wrap">
       <h1 class="wp-heading-inline"><?php echo __( 'WPF Fields', 'wpf' ); ?></h1>
-      <a href="<?php echo $this->get_add_url(); ?>" class="page-title-action"> <?php echo __( 'Add New', 'wpf' ); ?></a>    
+      <a href="<?php echo esc_url( $this->get_add_url() ); ?>" class="page-title-action"> <?php echo __( 'Add New', 'wpf' ); ?></a>    
       <table class="wp-list-table wpf-fields widefat fixed striped">
         <thead>       
         <td scope="col" class="manage-column column-title"><?php echo __( 'Title', 'wpf' ); ?> </td>
@@ -200,13 +204,13 @@ class WPF_Field_CRUD {
             <td><?php echo $widget_names[ $field_item['widget'] ]; ?></td>
             <td><?php echo $field_item['required'] ? 'yes' : 'no'; ?></td>
             <td><?php echo $field_item['active_by_default'] ? 'yes' : 'no'; ?></td>            
-            <td><a href="<?php echo $this->get_edit_url( 
-                $field_item['id'] ); ?>">
+            <td><a href="<?php echo esc_url( $this->get_edit_url( 
+                $field_item['id'] ) ); ?>">
                 <?php echo __( 'Edit', 'wpf' ); ?>
                 <a>
-                <a href="<?php echo $this->get_delete_url( 
-                $field_item['id'] ); ?>"
-                onclick="return confirm('<?php echo __( 'Are you sure you want to delete this front field? This action cannot be undone.', 'wpf' ); ?>');">
+                <a href="<?php echo esc_url( $this->get_delete_url( 
+                $field_item['id'] ) ); ?>"
+                onclick="return confirm('<?php echo __( 'Are you sure you want to delete this field? This action cannot be undone.', 'wpf' ); ?>');">
                 <?php echo __( 'Delete', 'wpf' ); ?>
                 <a>
             </td>
@@ -216,7 +220,6 @@ class WPF_Field_CRUD {
           <tr class="no-items"><td colspan="4"><?php echo __( 'No items found. You can add a new front field by clicking on `Add new` button next to the page title', 'wpf' ); ?></td>
           </tr>
         <?php endif; ?>
-
         </tbody>
       </table>
     </div>
@@ -234,7 +237,9 @@ class WPF_Field_CRUD {
    * The edit form page handler of the add_submenu_page      
    */
   public function edit_form_menu_page_handler() {
-    echo do_shortcode( "[" . self::FORM_SHORTCODE . " field_id='{$_GET['field_id']}']" );
+    $field_id = isset( $_GET['field_id'] ) ? sanitize_text_field( $_GET['field_id'] ) : '';
+    $field_id = esc_attr( $field_id );
+    echo do_shortcode( "[" . self::FORM_SHORTCODE . " field_id='{$field_id}']" );
   }
 
   /**
@@ -242,18 +247,19 @@ class WPF_Field_CRUD {
    * The cmb2 form    
    */
   public function form() {
+    $field_id = isset( $_GET['field_id'] ) ? sanitize_text_field( $_GET['field_id'] ) : '';
     $cmb = new_cmb2_box( array(
       'id'           => self::FORM_ID,      
       'object_types' => array( 'post' ),     
       'hookup'       => false,
       'save_fields'  => false, 
-      'classes' => array( isset( $_GET['field_id'] ) ? 'wpf-edit-form' : 'wpf-add-form' ),      
+      'classes' => array( !empty( $field_id ) ? 'wpf-edit-form' : 'wpf-add-form' ),      
     ) ); 
-    if ( isset( $_GET['field_id'] ) ) {
+    if ( !empty( $field_id ) ) {
       $cmb->add_field( array(            
         'id'      => 'field_id',    
         'type'    => 'hidden',
-        'default' => $_GET['field_id'],      
+        'default' => esc_attr( $field_id ),      
       ) ); 
     }
     $cmb->add_field( array(
@@ -265,7 +271,7 @@ class WPF_Field_CRUD {
         'required' => 'required',
         'pattern' => '.{3,}',
         'title' => "Start with a letter",
-        'data-form-type' => isset( $_GET['field_id'] ) ? 'edit' : 'add',        
+        'data-form-type' => !empty( $field_id ) ? 'edit' : 'add',        
       ),
     ) );
     $cmb->add_field( array(
@@ -276,8 +282,7 @@ class WPF_Field_CRUD {
       'attributes' => array(         
         'autocomplete' => 'off',       
         'pattern' => '[a-z][a-z0-9_]{3,}',
-        'title' => "Start with a letter",
-        //'readonly' => true,
+        'title' => "Start with a letter",        
       ),
     ) );        
     $cmb->add_field( array(
@@ -295,8 +300,8 @@ class WPF_Field_CRUD {
       'default' => 0,      
     ) );
     $widget_locked = false;
-    if ( isset( $_GET['field_id'] ) ) {
-      $field = new WPF_Field( $_GET['field_id'] );
+    if ( !empty( $field_id ) ) {
+      $field = new WPF_Field( $field_id );
       $widget = $field->get_widget();
       global $wpf_widgets;
       $widget_locked = isset( $wpf_widgets[$widget]['libs'] ) && 
@@ -367,7 +372,7 @@ class WPF_Field_CRUD {
       'default' => '',
     ) );
 
-    if ( isset( $_GET['field_id'] ) ) {
+    if ( !empty( $field_id ) ) {
       $cmb->add_field( array(
         'name'    => 'Default',        
         'id'      => 'field_default_text',
@@ -403,7 +408,7 @@ class WPF_Field_CRUD {
         'type'    => 'multicheck',
         'after' => wc_help_tip( __( 'Set up the default value for the field. The extra charge will be added per product price. <em>Notice:</em> If you\'ve added / changed / removed some options then you\'ll see the proper list of options only after Save button click ', 'wpf' ), true ), 
         'default' => '0',
-        'options' => wpf_get_field_options( $_GET['field_id'] )
+        'options' => wpf_get_field_options( $field_id )
       ) );
     } 
     $options_group = $cmb->add_field( array(
@@ -494,7 +499,7 @@ class WPF_Field_CRUD {
       'default' => 0,      
     ) ); 
     $titles = array_column( wpf_get_fields(), 'title', 'name' );
-    $field_id = isset( $_GET['field_id'] ) ? $_GET['field_id'] : '';
+    $field_id = isset( $_GET['field_id'] ) ? sanitize_text_field( $_GET['field_id'] ) : '';
     // if edit form - exclude current field from the dependency list
     if ( !empty( $field_id ) ) {
       $field = new WPF_Field( $field_id );
@@ -557,37 +562,31 @@ class WPF_Field_CRUD {
     if ( !is_object( $cmb ) ) {
       return false;
     }
-    $post_data = array();
-    // Get our shortcode attributes and set them as our initial post_data args
-    if ( isset( $_POST['atts'] ) ) {
-      foreach ( (array) $_POST['atts'] as $key => $value ) {
-        $post_data[ $key ] = sanitize_text_field( $value );
-      }
-      unset( $_POST['atts'] );
-    }       
-    
+
     // Check security nonce
     if ( ! isset( $_POST[ $cmb->nonce() ] ) || ! wp_verify_nonce( $_POST[ $cmb->nonce() ], $cmb->nonce() ) ) {
       return $cmb->prop( 'submission_error', new WP_Error( 'security_fail', __( 'Security check failed.', 'wpf' ) ) );
     }      
-    if ( empty( $_POST['title'] )   ) {
+
+    $sanitized_values = $cmb->get_sanitized_values( $_POST );  
+
+    if ( empty( $sanitized_values['title'] )   ) {
       return $cmb->prop( 'submission_error', new WP_Error( 'post_data_missing', __( 'The title is required.', 'wpf' ) ) );    
     }      
-    if ( empty( $_POST['name'] )   ) {
+    if ( empty( $sanitized_values['name'] )   ) {
       return $cmb->prop( 'submission_error', new WP_Error( 'post_data_missing', __( 'The name is required.', 'wpf' ) ) );    
     }      
-    if ( empty( $_POST['widget'] )   ) {
+    if ( empty( $sanitized_values['widget'] )   ) {
       return $cmb->prop( 'submission_error', new WP_Error( 'post_data_missing', __( 'The type is required.', 'wpf' ) ) );    
     }
-    if ( empty( $_POST['charge_type'] )   ) {
+    if ( empty( $sanitized_values['charge_type'] )   ) {
       return $cmb->prop( 'submission_error', new WP_Error( 'post_data_missing', __( 'The charge type is required.', 'wpf' ) ) );    
-    }     
-    $edit_form = isset( $_GET['field_id'] );
-    if ( !$edit_form && !wpf_is_name_unique( $_POST['name'] ) ) {
+    } 
+    $field_id = isset( $_GET['field_id'] ) ? sanitize_text_field( $_GET['field_id'] ) : '';
+    $edit_form = !empty( $field_id );
+    if ( !$edit_form && !wpf_is_name_unique( $sanitized_values['name'] ) ) {
       return $cmb->prop( 'submission_error', new WP_Error( 'post_data_missing', __( 'The name is used by another field. Please rename this field.', 'wpf' ) ) );    
-    }   
-                  
-    $sanitized_values = $cmb->get_sanitized_values( $_POST );        
+    }                         
     
     $title = $sanitized_values['title'];
     $name = $sanitized_values['name'];
@@ -615,7 +614,7 @@ class WPF_Field_CRUD {
                               $sanitized_values['field_default_option_single'] : '';
     $default_option_multiple = isset( $sanitized_values['field_default_option_multiple']                            ) ? $sanitized_values['field_default_option_multiple'] : '';            
     $field = $edit_form ? 
-             new WPF_Field( $_GET['field_id'] ) : 
+             new WPF_Field( $field_id ) : 
              new WPF_Field();
     $field->set_name( $name );
     $field->set_title( $title );
@@ -773,24 +772,23 @@ class WPF_Field_CRUD {
     }
     $cmb = cmb2_get_metabox( self::FORM_ID, 'custom' );        
     
-    $title  = isset( $_POST['title'] ) ? $_POST['title'] : '';
-    $name   = isset( $_POST['name'] ) ? $_POST['name'] : '';
-    $widget   = isset( $_POST['widget'] ) ? $_POST['widget'] : '';    
-    $chargeable   = isset( $_POST['chargeable'] ) ? $_POST['chargeable'] : 0;
-    $charge_type   = isset( $_POST['charge_type'] ) ? $_POST['charge_type'] : 'fixed_text';
-    $unit   = isset( $_POST['unit'] ) ? $_POST['unit'] : '';
-    $charge  = isset( $_POST['charge'] ) ? $_POST['charge'] : '';    
+    $title = isset( $_POST['title'] ) ? sanitize_text_field( $_POST['title'] ) : '';
+    $name = isset( $_POST['name'] ) ? sanitize_text_field( $_POST['name'] ) : '';
+    $widget = isset( $_POST['widget'] ) ? sanitize_text_field( $_POST['widget'] ) : '';     
+    $chargeable = isset( $_POST['chargeable'] ) ? sanitize_text_field( $_POST['chargeable'] ) : 0;
+    $charge_type = isset( $_POST['charge_type'] ) ? sanitize_text_field( $_POST['charge_type'] ) : 'fixed_text';
+    $unit = isset( $_POST['unit'] ) ? sanitize_text_field( $_POST['unit'] ) : '';
+    $charge = isset( $_POST['charge'] ) ? sanitize_text_field( $_POST['charge'] ) : '';
     $field_default_text = isset( $_POST['field_default_text'] ) ? 
-                                $_POST['field_default_text'] : '';
+                          sanitize_text_field( $_POST['field_default_text'] ) : '';
     $field_default_checkbox = isset( $_POST['field_default_checkbox'] ) ? 
-                                    $_POST['field_default_checkbox'] : 0;
+                              sanitize_text_field( $_POST['field_default_checkbox'] ) : 0;
     $field_default_option_single  = isset( $_POST['field_default_option_single'] ) ? 
-                                    $_POST['field_default_option_single'] : '';
+                                    sanitize_text_field( $_POST['field_default_option_single'] ) : '';
     $field_default_option_multiple  = isset( $_POST['field_default_option_multiple'] ) ? 
-                                      $_POST['field_default_option_multiple'] : '';    
+                                      array_map( 'sanitize_text_field', $_POST['field_default_option_multiple'] ) : '';    
     // the form is not submitted (init)    
-    if ( isset( $field_id ) && !empty( $field_id ) && ! isset( $_POST['title'] ) ) {           
-
+    if ( isset( $field_id ) && !empty( $field_id ) && empty( $title ) ) {           
       $field_item = $this->fields[ $field_id ];                  
       $name = $field_item['name'];      
       $title = $field_item['title'];
@@ -920,8 +918,8 @@ class WPF_Field_CRUD {
     if ( isset( $_GET['submitted'] ) ) {      
       // Add notice of submission to our output
       $output .= '<div class="notice notice-success is-dismissible"> 
-                    <p>'.sprintf( __( "The field has been saved. <a href='{$add_field_url}'>Add another field</a> or <a href='{$add_product_url}'>Create a product</a> (Use <em>Front fields</em> section to handle the fields per product.) ", 'wpf' ) ).'</p>
-                  </div>';
+                  <p>'.sprintf( __( "The field has been saved. <a href='{$add_field_url}'>Add another field</a> or <a href='{$add_product_url}'>Create a product</a> (Use <em>Front fields</em> section to handle the fields per product.) ", 'wpf' ) ).'</p>
+                </div>';
     }   
     $output .= cmb2_get_metabox_form( $cmb, 'custom', array( 'save_button' => __( 'Save', 'wpf' ) ) );
     return $output;
@@ -941,9 +939,10 @@ class WPF_Field_CRUD {
         if ( isset( $_GET['page'] ) &&
              $_GET['page'] === 'wpf_field_edit' &&
              isset( $_GET['field_id'] ) ) {
+          $field_id = sanitize_text_field( $_GET['field_id'] );
           $group = array();
           $options = WPF_Field_Option_DS::instance()
-                      ->get_options_by_field_id( $_GET['field_id'] );
+                      ->get_options_by_field_id( $field_id );
           foreach ( $options as $option ) {
             $group[] = array(
               'field_option_id' => $option['id'],
@@ -1018,7 +1017,7 @@ class WPF_Field_CRUD {
    */
   public function wpf_units( $units ) {
     $units['g'] = __( 'g', 'wpf' );
-    $units['kg'] = __( 'Kg', 'wpf' );
+    $units['kg'] = __( 'kg', 'wpf' );
     $units['mm'] = __( 'mm', 'wpf' );
     $units['cm'] = __( 'cm', 'wpf' );  
     $units['m'] = __( 'm', 'wpf' );
@@ -1098,14 +1097,14 @@ class WPF_Field_CRUD {
    */
   private function get_edit_url( $field_id, $destination = self::LIST_PAGE ) {
     return add_query_arg(
-        array(          
-          'page' => self::EDIT_PAGE,          
-          'field_id' => $field_id,
-          'destination' => $destination,          
-          'action' => 'edit'
-        ),
-        admin_url('admin.php')
-      );
+      array(          
+        'page' => self::EDIT_PAGE,          
+        'field_id' => $field_id,
+        'destination' => $destination,          
+        'action' => 'edit'
+      ),
+      admin_url('admin.php')
+    );
   }
 
   /**

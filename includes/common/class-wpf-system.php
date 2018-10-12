@@ -239,7 +239,7 @@ class WPF_System {
       'libs' => array(
         'admin_js' => plugin_dir_url( dirname( __FILE__ ) ) . 'field-widgets/js/wpf-date-widget.admin.js',
         'front_js' => plugin_dir_url( dirname( __FILE__ ) ) . 'field-widgets/js/wpf-date-widget.front.js',
-        'css' => 'http://ajax.googleapis.com/ajax/libs/jqueryui/1.9.0/themes/base/jquery-ui.css',
+        'css' => plugin_dir_url( dirname( __FILE__ ) ) . 'field-widgets/css/jquery-ui.min.css',
         'js_dependencies' => array( 'jquery', 'jquery-ui-datepicker' ),  
         'settings' => array(
           'dateFormat' => 'dd-mm-yy',          
@@ -293,21 +293,13 @@ class WPF_System {
       'libs' => array(
         'admin_js' => plugin_dir_url( dirname( __FILE__ ) ) . 'field-widgets/js/wpf-slider-widget.admin.js',
         'front_js' => plugin_dir_url( dirname( __FILE__ ) ) . 'field-widgets/js/wpf-slider-widget.front.js',
-        'css' => 'http://ajax.googleapis.com/ajax/libs/jqueryui/1.9.0/themes/base/jquery-ui.css',
-        'js_dependencies' => array( 'jquery', 'jquery-ui-slider' ),
-        //'css_dependencies' => array( 'jquery-ui-slider' ),
+        'css' => plugin_dir_url( dirname( __FILE__ ) ) . 'field-widgets/css/jquery-ui.min.css',
+        'js_dependencies' => array( 'jquery', 'jquery-ui-slider' ),        
         'settings' => array(
           'step' => 1,
           'min' => 1,
           'max' => 50
-        ),
-        /*'custom_dependencies' => array(
-          'wpf-slider' => array(
-            'js' => plugin_dir_url( dirname( __FILE__ ) ) . 'field-widgets/js/slider.min.js',
-            'css' => 'http://ajax.googleapis.com/ajax/libs/jqueryui/1.9.0/themes/base/jquery-ui.css',
-            'dependencies' => array( 'jquery' ),
-          ),          
-        ),*/
+        ),        
       ),
     );
     $widgets['WPF_Checkbox_Widget'] = array(

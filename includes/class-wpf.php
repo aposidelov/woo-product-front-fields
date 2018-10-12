@@ -41,8 +41,7 @@ class WPF {
         $this->define_field_crud_hooks();
         $this->define_field_profile_crud_hooks();
         $this->define_product_form_hooks();
-        $this->define_front_hooks();
-        //$this->define_widgets();
+        $this->define_front_hooks();       
     }
 
     /**
@@ -196,7 +195,7 @@ class WPF {
     private function define_field_crud_hooks() {                
         $field_crud = new WPF_Field_CRUD( $this->get_WPF(), $this->get_version() );                  
 
-        $this->loader->add_filter( '    ', $field_crud, 'wpf_units' );                
+        $this->loader->add_filter( 'wpf_units', $field_crud, 'wpf_units' );                
         $this->loader->add_action( 'admin_enqueue_scripts', $field_crud, 'enqueue_styles' );
         $this->loader->add_action( 'admin_enqueue_scripts', $field_crud, 'enqueue_scripts', 10, 1 );
         // ajax callbacks

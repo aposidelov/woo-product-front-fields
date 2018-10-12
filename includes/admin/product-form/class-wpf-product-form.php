@@ -49,7 +49,8 @@ class WPF_Product_Form {
     } else {
       $this->fields = wpf_get_fields();
       if ( isset( $_GET['fpid'] ) ) {
-        $field_profile = wpf_get_field_profile( $_GET['fpid'] );                    
+        $profile_id = sanitize_text_field( $_GET['fpid'] );
+        $field_profile = wpf_get_field_profile( $profile_id );                    
         $fids = explode( ',', $field_profile['fields'] );        
         foreach ( $this->fields as $key => $field ) {
           if ( in_array( $key, $fids ) ) {
@@ -246,10 +247,13 @@ class WPF_Product_Form {
             
       // check if a field is a checkboxes group or a single value      
       $value = wpf_get_post( $name, '' );
-      if ( !empty( $value ) ) {
-        $value = is_array( $_POST[$name] ) ? 
-                 implode( ',', $_POST[$name] ) : 
-                 $_POST[$name];
+      if ( !empty( $value ) ) {        
+        if ( is_array( $_POST[$name] ) ) {
+          $value = array_map( 'sanitize_text_field', $_POST[$name] );
+          $value = implode( ',', $value );
+        } else {
+          $value = sanitize_text_field( $_POST[$name] );
+        }        
       }      
       $updated_fields[$field_id] = array( 
         'is_active' => $is_active,
